@@ -2,10 +2,10 @@ import operator
 #from algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
 import statistics as st
 from utility import orientation,orientation_i, complement,generate_subset,\
- doescross, doescross_simple, intersections, simple_intersections
+ doescross, doescross_simple, intersections, simple_intersections, F2
 from Algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
 from Algebra import E0
-from utility import get_domain, get_range
+from utility import get_domain, get_range, generate_bijections, combinations
 
 
 '''Elementary tangles and its algebras'''
@@ -487,16 +487,30 @@ class TANGLE:
         '''Get the list of idempotents depending on variable `is_left`.
         If `is_left` is true, takes into account of left boundary of this tangle'''
         
-        if is_left == True:
-            i_left = Idempotent(self,(1,2,4),True)
+        idems = []
         
+        if is_left == True:
+            n = self.num_alpha_left() - 1 
+        else:
+            n = self.num_alpha_right() - 1 
+
+        lst = generate_bijections(n)
+    
+        for perm in lst:
+            idems.append(Idempotent(self, perm, is_left))
+            
+        return idems
+    
     def getAlgebra(self, is_left): #cb and fill in
         '''Get the list of generators of the strand algebra, depending on variable `is_left`.
         If `is_left` is true, takes into account of left boundary of this tangle'''
+        
+        
         raise NotImplementedError
 
     def getStrandDiagrams(self,algebra): # cb and fillin 
         ''' Get the list of generators of CT(Ti). '''
+
         
 class Idempotent(tuple):
     '''Represents an idempotent in a certain tangle. Stored as a tuple of occupied pairs'''
@@ -577,6 +591,7 @@ class Idempotent(tuple):
         else:
             return Simple_Strand(parent,self.is_left ,self.get_tup())
         
+        
 class Strands(tuple):
     ''' Represents a (fixed) list of strands in a certain tangle. Stored as
     a tuple of tuple of pairs.
@@ -594,6 +609,8 @@ class Strands(tuple):
         self.tangle = tangle
         self.data = data
         self.convert()
+        self.converted  = self.left_converted.copy()
+        self.converted.update(self.right_converted)
         self.left_crossings = self.strandCrossing(True) #list of crossings on the left
         self.right_crossings = self.strandCrossing(False)
      
@@ -618,9 +635,7 @@ class Strands(tuple):
     
     def __repr__(self):
         return str(self)
-    
-    def opp(self): # not needed for tangle cb and remove 
-        pass
+
     
     def occupied_left_alpha(self):
         '''returns a tuple of occupied left alphas curves'''
@@ -670,6 +685,40 @@ class Strands(tuple):
         occupied_r = self.occupied_right_alpha()
         return Idempotent(self.tangle, occupied_r, False)
     
+    def crossings(self,option, left_half = False, right_half = False):
+        ''' Gives the number of crossings between strands and/or tangles
+        using the given options used for
+        Alexander and Maslov gradings.
+        For options refer to crossingtypes.jpg '''
+        
+        #adapted from Strand Diagram Class
+        num = 0
+        if option == 1:
+            # tangle left & strand
+            if left_half == True: ## left half:
+                dict1 = self.tangle.orient_left_lhalf
+                dict2 = self.left_converted
+                num+= simple_intersections(dict1,dict2,False)
+            
+            if right_half == True: ## right half:
+                dict1 = self.tangle.orient_left_rhalf
+                dict2 = self.right_converted
+                num+= simple_intersections(dict1,dict2,False)
+            
+        if option == 2:
+            #tangle right & strand
+            if left_half == True: ## left half:
+                dict1 = self.tangle.orient_right_lhalf
+                dict2 = self.left_converted
+                num+= simple_intersections(dict1,dict2,False)
+            
+            if right_half == True: ## right half:
+                dict1 = self.tangle.orient_right_rhalf
+                dict2 = self.right_converted
+                num+= simple_intersections(dict1,dict2,False)
+                
+        return num
+    
     def strandCrossing(self, left_half = True): 
         ''' Returns the list of crossings between moving strands
         either left_half or right_half depending on `left_half`
@@ -705,35 +754,50 @@ class Strands(tuple):
                     right_half.append((right_strands[combo[0]],right_strands[combo[1]]))
     
             return right_half
+    
+    def strandCrossing_dict(self, left_half = True):  # cb and modify  or delete
+        ''' Returns the dictionary of crossings between moving strands
+        either left_half or right_half depending on `left_half`
+        For example, if in the left: crossing pairs are (4,2) and (1,3)
+        and intersection point if (3,2)
+        and if in the right: crossing pairs are (4,1) and (1,5) 
+        if left_half = True: 
+            returns [((4,2),(1,3)): (3,2),...]
+        
+        if left_half = False:
+            returns [((4,1), (1,5)): (3,3),...]
+        '''
+    
     def numCrossing(self, left_half = True):
         if left_half:
             return len(self.left_crossings)
         else:
             return len(self.right_crossings)
-            
-    def numCrossing_m(self): #cb and remove
-        ''' Returns the number of crossings between moving strands'''
-        left_half = 0
-        right_half = 0
-        left_strands = self.data[0] # tuple of left srands
-        right_strands = self.data[1] # tuple of right srands
+    
+    
+    def convert_di(self):
+        ''' Like convert() below, but double indexed:
+        For example if (1,2) in left half, it would return {(1,2):((1,0.5),(1.5,1.5))}
+        with natural orientation from left to right'''
         
+        left_converted = {}
+        right_converted ={}
         #left half
-        l_num = len(left_strands) # of left strands
-        combinations = generate_subset(l_num - 1 , 2)
-        for combo in combinations:
-            if doescross_simple(left_strands[combo[0]],left_strands[combo[1]]) == True:
-                left_half += 1
-
+        for strand in self[0]:
+            start = self.tangle.alpha_left[strand[0]]
+            end = self.tangle.beta[strand[1]]
+            left_converted.update({strand :(start,end)})
         
-        r_num = len(right_strands) # of left strands
-        combinations = generate_subset(r_num - 1 , 2)
-        for combo in combinations:
-            if doescross_simple(right_strands[combo[0]],right_strands[combo[1]]) == True:
-                right_half += 1
-    
-        return left_half + right_half
-    
+        #right half
+        for strand in self[1]:
+            start = self.tangle.beta[strand[0]]
+            end = self.tangle.alpha_right[strand[1]]
+            right_converted.update({strand:(start,end)})
+        
+        self.left_converted_di = left_converted
+        self.right_converted_di = right_converted
+        
+
     def convert(self):
         ''' Converts a given strand in a tuple format, to a dictionary format
         using the coordinates stored in its parent tangle.
@@ -840,8 +904,7 @@ class StrandDiagram(Generator):
     
     def crossings(self,option, left_half = False, right_half = False):
         ''' Gives the number of crossings between strands and/or tangles
-        using the given options used for
-        Alexander and Maslov gradings.
+        using the given options used for Alexander and Maslov gradings.
         For options refer to crossingtypes.jpg '''
         
         num = 0
@@ -912,12 +975,10 @@ class StrandDiagram(Generator):
         #right_half
         maslov += self.strands.numCrossing(False) - self.crossings(2, False, True) + \
                     self.crossings(4, False, True)
-        
         return maslov
     
     def alexander(self):
         alex = 0
-        
         alex += self.crossings(1, True, True) - self.crossings(2, True, True) + \
                         self.crossings(3, True, True) - self.crossings(4, True, True) \
                                     - self.crossings(5,True, True)
@@ -940,30 +1001,43 @@ class Simple_Strand(Generator):
          `pairs` is a tuple, that specifies the pairs
          if simple_strand connects 1 to 3, 3 to 4, it will contain
          ((1,3), (3,4))'''
-        # parent here refers to the Algebra
+        # parent here refers to the Strand Algebra
+        
+
+        Generator.__init__(self,parent)
+        self.p_tangle = parent.tangle # tangle that it takes its sign from 
+        self.is_left = is_left
+        
+        if self.is_left:
+            self.sign_seq = self.p_tangle.left_boundary
+        else:
+            self.sign_seq = self.p_tangle.right_boundary
         
         # S in petkova paper
         self.s = get_domain(pairs)
         # T in petkova paper
         self.t = get_range(pairs)
         
-        #Check if S and T have the same size
+        # making sure S, T C [n]
+        if self.is_left:
+            if self.p_tangle.num_alpha_left() <= max(self.s) or \
+            self.p_tangle.num_alpha_left() <= max(self.t):
+                raise ValueError("The strands are out of bound.")
+        else:
+            if self.p_tangle.num_alpha_right() <= max(self.s) or \
+            self.p_tangle.num_alpha_right() <= max(self.t):
+                raise ValueError("The strands are out of bound.")
+        
+        #Check if S and T have the same size ( i.e bijection )
         if len(self.s) != len(self.t):
             raise ValueError("Something is wrong -- S and T do not have the same size.")
-            
-        Generator.__init__(self,parent)
-        self.p_tangle = parent.tangle # tangle that it takes its sign from 
-        self.is_left == is_left
         
-        if self.is_left == True:
-            self.sign_seq = self.p_tangle.left_boundary
-        else:
-            self.sign_seq = self.p_tangle.right_boundary
-    
         # Instantiate Base Tangle and strand: 
         self.tangle = TANGLE(self.get_tangle_pairs())
         self.tangle.is_simple_tangle()
         self.strands = Strands(self.tangle, self.get_tuple_strand(pairs))
+        self.maslov = self.maslov()
+        self.alexander = self.alexander()
            
     def __eq__(self, other):
         return self.parent == other.parent and self.strands == other.strands
@@ -1001,20 +1075,62 @@ class Simple_Strand(Generator):
         ''' returns the tuple that is needed for strand object '''
         
         # quite necessary - will come back and remove if unncessary
-        #if self.is_left true, then make bijections look like up/down then ---
+        #if self.is_left true, then make bijections look  --- then up/down
         if self.is_left == True:
             right_half = tuple((k,k) for k in self.t)
-            return tuple((pairs, right_half))
+            return tuple(( right_half, pairs))
         
-        # if self.is_left False, then make bijections look like --- then up/down
+        # if self.is_left False, then make bijections look like up/down then ----
         else:
             left_half = tuple((k,k) for k in self.s)
-            return tuple((left_half,pairs))
+            return tuple((pairs, left_half))
         
 #        # always up/down then horizontal_ CB to this laer 
 #        right_half = tuple((k,k) for k in self.t)
 #        return tuple((pair, right_half))
-           
+    
+    def crossings(self,option, left_half = False, right_half = False):
+        ''' Gives the number of crossings between strands and/or tangles
+        using the given options used for
+        Alexander and Maslov gradings.
+        For options refer to crossingtypes.jpg '''
+        
+        #adapted from Strand Diagram Class
+        num = 0
+        if option == 1:
+            # tangle left & strand
+            if left_half == True: ## left half:
+                dict1 = self.tangle.orient_left_lhalf
+                dict2 = self.strands.left_converted
+                num+= simple_intersections(dict1,dict2,False)
+            
+            if right_half == True: ## right half:
+                dict1 = self.tangle.orient_left_rhalf
+                dict2 = self.strands.right_converted
+                num+= simple_intersections(dict1,dict2,False)
+            
+        if option == 2:
+            #tangle right & strand
+            if left_half == True: ## left half:
+                dict1 = self.tangle.orient_right_lhalf
+                dict2 = self.strands.left_converted
+                num+= simple_intersections(dict1,dict2,False)
+            
+            if right_half == True: ## right half:
+                dict1 = self.tangle.orient_right_rhalf
+                dict2 = self.strands.right_converted
+                num+= simple_intersections(dict1,dict2,False)
+                
+        return num
+    
+    def maslov(self): 
+        '''maslov grading for a strand algebra generator'''
+        return self.strands.numCrossing(True) + self.strands.numCrossing(False) - self.strands.crossings(1, True, True) 
+
+    def alexander(self):
+        '''maslov grading for a strand algebra generator'''
+        return 0.5 * (self.strands.crossings(1,True,True) - self.strands.crossings(2, True, True))
+    
     def isIdempotent(self):
         return self.s == self.t
 
@@ -1023,7 +1139,6 @@ class Simple_Strand(Generator):
         either left_half or right_half depending on `left_half'''
 
         return self.strands.numCrossing(True) + self.strands.numCrossing(False)
-
 
 class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
     '''Represents the strand algebra of a tangle T_i generated by 
@@ -1066,7 +1181,8 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
         s1 < s2 are starting points of strands in gen that crosses, and
         diff_term is a generator in gen.diff() obtained by uncrossing these two
         strands. Together they specify all terms in gen.diff(). '''
-    
+        
+        
     def diff(self, gen):  
         result = E0
         if self.ring is F2:
@@ -1085,7 +1201,8 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
     
     def _multiplyRaw(self, gen1, gen2):
         ''' If gen1 and gen2 can be multiplied, return the generator that is
-        their product. Otherwise, return None.'''
+        their product. Otherwise, return None.
+        gen1 and gen2 are compatible by default.'''
     
     def multiply(self, gen1, gen2):
         
@@ -1113,6 +1230,92 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
         else:
             pass 
     
+    def mod_6(self,gen1, gen2):
+        '''returns True if two generators catches mod 6 relations '''
+    
+    
+    ## helper methods for mod 6 method
+    
+    def mult_two_halfs(left_tangle, left_strands, right_tangle, right_strands):
+        ''' Tries to multiply two half tangles T1 and T2, and mod out first two
+        relations in PetKova paper Figure 6. 
+        left_tangle : [dict1, dict2] right half of tangle T1, array of dictionary objects of coordinates
+                    going left, and going right. i.e., dict1 : orienting left, dict2: orienting right
+        right_tangle: [dict1, dict2] left half of tangle T2, a dictionary object of coordinates
+        left_strand: right half of tangle T1 strands, a dictionary object of coordinates
+        right_strand: left half of tangle T1 strands, a dictionary object of coordinates
+        
+        pairs is a dictionary object that contain key: start tangle, and value: start strand 
+        for tangle and strand intersecting twice
+        
+        used for algebra multiplication and for other things later( d+, dm)
+        
+        '''
+        
+        # cb and change it to true or false later if uncessary
+        
+        # check if compatible
+        if not (get_range_dict(left_tangle) == get_domain_dict(right_tangle) or \
+            get_range_dict(right_tangle) == get_domain_dict(left_tangle)): 
+            raise TypeError("The tangle boundaries don't line up.")
+        if not get_range_dict(left_strands) == get_domain_dict(right_strands):
+            raise TypeError("strand boundaries don't line up")
+        
+        #assume split_cup and cap for now cb and check with akram
+        
+        pairs = {}
+        
+        # tangle orienting right
+        t1 = left_tangle[0]
+        t2 = right_tangle[0]
+    
+        for k,v in t1.items():
+            for a,b in left_strands.items():
+                if doescross_simple((k,v),(a,b)):
+                    new_tangle = (v,t2[v]) # on the right
+                    new_strand = (b, right_strands[b]) # on the right
+                    if doescross_simple(new_tangle, new_strand):
+                        pairs.update({k:a})
+            
+        # tangle orienting left
+        t1 = left_tangle[1]
+        t2 = right_tangle[1]
+        
+        for k,v in t2.items():
+            for c,b in right.strands.items():
+                if doescross_simple((v,k),(b,c)):
+                    new_tangle = (t1[v], v) # on the left
+                    
+                    for key,value in left_strands.items():
+                        if key == b:
+                            new-strand = (value,b) # get the left coordinate
+        
+                    if doescross_simple(new_tangle, new_strand):
+                        pairs.update({k, c})
+        
+        return pairs
+
+def cross_twice(self, left_strands, right_strands, c_l, c_r): # cb and change it to true or false later if uncessary
+        '''Given left_strand, and right_strand, returns double crossings,
+        assumes the strands are multiplicable. 
+        c_1 is strandCrossing(False) called from the left_strands
+        c_2 is the strandCrossing(True) called from right_strands'''
+    
+        # check if compatible cb and remove
+        if not (get_range_dict(left_strands) == get_domain_dict(right_strands)):
+            raise TypeError ("strand boundaries don't line up")
+                
+        double_crossings = []
+        
+        for crossing_pair in left_strands:
+            x1, x2 = crossing_pair[0][1], crossing_pair[1][1]
+            
+            for r_crossing_pair in right_strands:
+                if {r_crossing_pair[0][0],r_crossing_pair[1][0]} == ({x1,x2}):
+                    double_crossings.append((crossing_pair,r_crossing_pair))
+            
+        return double_crossings
+    
 class StrandAlgebraElement(Element):
      ''' An element of strand algebra.'''
      
@@ -1122,7 +1325,6 @@ class StrandAlgebraElement(Element):
             if not sd.isIdempotent():
                 return False
         return True
-
 
 
 ########------------------------ cb and remove if uncessary ----------#####
