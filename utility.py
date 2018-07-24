@@ -9,21 +9,116 @@ import itertools as it
 from numpy import *
 import numpy as np
 
+# adapted from bzhan
 
-#Rings
-#n = 2
-#class ModNRing(n):
-#    '''The ring Z/nZ '''
-#    def __init__(self,n):
-#        self.n = n
-#        self.zero = self.convert(0)
-#        self.one = self.convert(1)
-#    
-#    def convert(self, x):
-#        '''convert x to an element of this ring i.e return x mod n'''
-##class ModNElement(Number):
-##    pass
-#        
+class Ring:
+    def convert(self, data):
+        """Try to convert data to an element of this ring."""
+        raise NotImplementedError("convert function not specified for ring.")
+
+class RingElement(Number):
+    pass
+
+
+class ModNRing(Ring):
+    """The ring Z/nZ."""
+    def __init__(self, n):
+        self.n = n
+        self.zero = self.convert(0)
+        self.one = self.convert(1)
+
+    def add(self, elt1, elt2):
+        elt1, elt2 = self.convert(elt1), self.convert(elt2)
+        if elt1 is NotImplemented or elt2 is NotImplemented:
+            return NotImplemented
+        return ModNElement(self, (elt1.val+elt2.val)%self.n)
+
+    def multiply(self, elt1, elt2):
+        elt1, elt2 = self.convert(elt1), self.convert(elt2)
+        if elt1 is NotImplemented or elt2 is NotImplemented:
+            return NotImplemented
+        return ModNElement(self, (elt1.val*elt2.val)%self.n)
+
+    def __eq__(self, other):
+        return self.n == other.n
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __hash__(self):
+        return hash((self.n, "ModNRing"))
+
+    def convert(self, data):
+        """Try to convert data to an element of this ring."""
+        if isinstance(data, ModNElement) and data.parent == self:
+            return data
+        if isinstance(data, int):
+            return ModNElement(self, data % self.n)
+        return NotImplemented
+
+class ModNElement(RingElement):
+    """An element in a ring Z/nZ."""
+    def __init__(self, parent, val):
+        self.parent = parent
+        self.val = val
+
+    def __str__(self):
+        return str(self.val)
+
+    def __repr__(self):
+        return str(self.val)
+
+    def __add__(self, other):
+        return self.parent.add(self, other)
+
+    def __radd__(self, other):
+        return self.parent.add(self, other)
+
+    def __mul__(self, other):
+        return self.parent.multiply(self, other)
+
+    def __rmul__(self, other):
+        return self.parent.multiply(self, other)
+
+    def __eq__(self, other):
+        """Can compare to integer 0 or 1."""
+        if isinstance(other, int) and (other == 0 or other == 1):
+            return self.val == other
+        else:
+            return self.val == other.val
+
+    def invertible(self):
+        """Returns whether this element is invertible in the ring."""
+        return gcd(self.val, self.parent.n) == 1
+
+    def inverse(self):
+        """Returns the inverse of this element. Must be invertible"""
+        # Currently only implemented for n = 2
+        assert self.parent.n == 2
+        return self
+
+class Integer(Ring):
+    """The ring Z."""
+    def convert(self, data):
+        """Try to convert data to an element of this ring."""
+        assert isinstance(data, int)
+        return data
+
+class IntegerElement(RingElement, int):
+    """An element in a ring Z."""
+    def __new__(cls, parent, val):
+        return int.__new__(cls, val)
+
+    def __init__(self, parent, val):
+        self.parent = parent
+
+
+F2 = ModNRing(2)
+ZZ = Integer()
+
+# Constants for positive and negative orientation
+POS, NEG = 1, -1
+
 class NamedObject:
     """Provides functionality for an object to be described by name. If this is
     listed as a parent class, an object will use name in equality comparisons,
@@ -56,10 +151,12 @@ class SummableDict(dict):
         Zeros are automatically thrown away'''
         
     def __add__(self, other):
+        ''' does not modify the invoking object '''
         return _dictAddTo(type(self)(), [self, other])
     
     def __iadd__(self, other):
-        '''typical add operation for dictionaries: add other onto self'''
+        '''typical add operation for dictionaries: add other onto self
+              modifies the invoking object.'''
         return _dictAddTo(self, other)
     
     def __sub__(self, other):
@@ -110,8 +207,6 @@ class SummableDict(dict):
         """Returns an arbitrary key from this dictionary. Must be non-empty."""
         #return iter(self).next() # in python 2
         return iter(self).__next__() # in python 3 
-
-        
 
 #dictionary helper methods:
     
@@ -304,7 +399,6 @@ def doescross_simple(left,right):
     '''given a pair of points left = (a_1, b_1),right = (a_2, b_2)
     it does tells us whether they intersect''' 
     
-    
     a = ((1, left[0]),(2,left[1]))
     b = ((1, right[0]),(2, right[1]))
     
@@ -344,6 +438,46 @@ def doescross_simple(left,right):
     else:
         return False
 
+def doescross_simple_rc(left,right):
+    '''given a pair of points left = (a_1, b_1),right = (a_2, b_2)
+    it does tells us whether they intersect and RETURNS coordinates''' 
+    
+    a = ((1, left[0]),(2,left[1]))
+    b = ((1, right[0]),(2, right[1]))
+    
+    def line(p1, p2):
+        A = (p1[1] - p2[1])
+        B = (p2[0] - p1[0])
+        C = (p1[0]*p2[1] - p2[0]*p1[1])
+        return A, B, -C
+    
+    def intersection(L1, L2):
+        D  = L1[0] * L2[1] - L1[1] * L2[0]
+        Dx = L1[2] * L2[1] - L1[1] * L2[2]
+        Dy = L1[0] * L2[2] - L1[2] * L2[0]
+        if D != 0:
+            x = Dx / D
+            y = Dy / D
+            return x,y
+        else:
+            return False
+        
+    L1 = line(a[0],a[1])
+    L2 = line(b[0],b[1])
+    
+    R = intersection(L1, L2)
+    #R = seg_intersect(a,b)
+    if R == False:
+        R = None
+    elif R[0] < 1 or R[0] > 2: 
+        R = None
+    elif not(in_between(left[0], left[1],R[1]) and in_between(right[0], right[1], R[1])): # Check Y coordinates
+        R = None
+    else:
+        pass
+    
+    return R
+
 def in_between(a,b, x):
     ''' returns True if x is in between a and b. 
         a > b or b < a may happen. Error returned if a = b'''
@@ -356,6 +490,46 @@ def in_between(a,b, x):
         return b < x and x < a
     else:
         return a < x and x < b
+    
+def in_between_list(arr, x):
+    ''' Given an array `arr`, returns true if there exists two values a1, a2 
+    in `arr` such that x is in between arr
+    if arr size is one, returns type error'''
+    if not isinstance(arr,list):
+        return TypeError("`arr` is not an array. Wrong type of input")
+    elif len(arr) == 1:
+        return TypeError("`arr` is of size 1. cannot use this method.")
+    else:
+        arr.sort()
+        maximum = max(arr)
+        minimum = min(arr)
+        if x > maximum or x < minimum:
+            return False
+        else:
+            return True
+        
+def reorganize_sign(cross):
+    '''returns [a1, a2, b1, b2]
+    Reorient points such that a1 is top left, then b1, a2, b2 in counter-
+    clockwise orientation'''
+    
+    # ex if cross = ((4,2),(1,3))
+    s1 = cross[0][0] #4
+    s2 = cross[1][0] #1
+    
+    if s1 > s2:
+        a1 = cross[0][0]
+        a2 = cross[0][1]
+        b1 = cross[1][0]
+        b2 = cross[1][1]
+    
+    else: # s1 < s2
+        a1 = cross[1][0]
+        a2 = cross[1][1]
+        b1 = cross[0][0]
+        b2 = cross[0][1]
+    
+    return [a1,a2,b1,b2]
 def doescross(a,b):
     '''given a pair of lines = ((x_1, y_1), (x_2, y_2)), ((x_3, y_3), (x_4, y_4))
     goes the intersection point, if one exists between, if not return None''' 
@@ -398,12 +572,93 @@ def doescross(a,b):
         pass
 
     return R
+
+
+def combinations(n, m):
+    ''' retyrbs an array of all possible combinations of n and m
+    for example, if n = 1 , n = 2, returns, if WLOG n < m
+    [ (0,0),(0,1),.....(n, m-1 ), (n,m)]'''
+    
+    
+    ran1 = [k for k in range(0, n+1)] # = [0,1,....n]
+    ran2 = [k for k in range(0, m+1)] # = [0,1,....m]
+    
+    combo = []
+    
+    for i in ran1:
+        for j in ran2:
+            combo.append((i,j))
+    
+    return combo
     
 def generate_subset(n, num):
     '''given range [n] = [0,1,2,...n], returns the list of subsets
     of size n of [n]'''
     return list(it.combinations(range(n+1), num))
+
+def generate_bijections(n):
+    ''' given n, gives a list of possible 'subsets'of n, including 0 and n
+    , EXCLUDING empty set. Used for generating idempotents'''
     
+    lst = []
+    for size in range(1,n+2):
+        lst += generate_subset(n, size)
+    
+    return lst
+
+def generate_bijections_2(n,m):
+    ''' Given n and m, it gives bijections from [n] and [m] with [n] and [m] 
+    that may have different size:
+        [n] = [0, 1, 2, 3....n]
+        [m] = [0, 1, 2, 3,...m]
+        '''
+    
+    app = []
+    if n > m:
+        bij = generate_bijections_same(m,m)
+        diff = n - m 
+        for b in bij:
+            arr = []
+            for pair in b:
+                arr.append((pair[0] + diff, pair[1]))
+            app.append(arr)
+    
+    if n < m:
+        bij = generate_bijections_same(n,n)
+        diff = m - n
+        for b in bij:
+            arr = []
+            for pair in b:
+                arr.append((pair[0], pair[1] + diff))
+            app.append(arr)
+    
+    print("++++++")
+    print(bij)
+    set1 = set(bij)        
+    return list(set1.union(set(app)))
+
+def generate_bijections_3(a1, b, a2):
+    ''' '''
+    pass
+    
+
+def generate_bijections_same(n):
+    ''' Given n and m, it gives bijections from [n] and [m] with [n] and [m] size the same'''
+
+    m = n
+    ran1 = [k for k in range(0, n+1)] # = [0,1,....n]
+    ran2 = [k for k in range(0, m+1)] # = [0,1,....m]
+    
+    bij = []
+     
+    for i in range(1, n+1): # i goes from 1 to n
+        for set1 in it.combinations(ran1, i):
+            for set2 in it.combinations(ran2, i):
+                for p in it.permutations(set2):
+                    bij.append(list(zip(set1,p)))
+    
+    return bij
+
 def intersections( dict1, dict2, itself = False):
     ''' given dict1, and dict2, returns dictionary `intersection`that contains
      unique intersection points. 
@@ -463,6 +718,65 @@ def simple_intersections( dict1, dict2, itself = False): # cb and fix positional
     
     ''' 
     return len(intersections(dict1, dict2, itself))
+
+def get_domain(tup):
+    '''given a tuple of pairs(injective), it returns list of domains
+    For example, if tup = ((1,2), (2,3), (4,2)), 
+    then this method returns [1,2,4]'''
+    
+    dom = []
+    for pair in tup:
+        dom.append(pair[0])
+    return dom
+    
+def get_range(tup):
+    '''given a tuple of pairs(injective), it returns list of domains
+    For example, if tup = ((1,2), (2,3), (4,4)), 
+    then this method returns [2,3,4]'''
+    
+    ran = []
+    for pair in tup:
+        ran.append(pair[1])
+    return ran
+
+def get_domain_dict(dic):
+    ''' either takes a dictionary object or a list of dictionary objects
+    and return the domain.'''
+    print("+++++ENTERING DOMAIN ++++++")
+    dom = set()
+    if isinstance(dic,list):
+        for cur_dic in dic:
+            dom.update(set(cur_dic.keys()))
+    else:
+        dom = set(dic.keys())
+
+    print(dom)
+    return dom
+
+def get_range_dict(dic):
+    ''' either takes a dictionary object or a list of dictionary objects
+    and return the range.'''
+    
+    print("+++++++ ENTERING RANGE++++++++")
+    ran= set()
+    if isinstance(dic,list):
+        for cur_dic in dic:
+#            print(set(cur_dic.values()))
+#            print("current ran =")
+#            print(ran)
+#            print("++++")
+            ran.update(set(cur_dic.values()))
+    else:
+        ran = set(dic.values())
+    print(ran)
+    return ran
+def is_bijection(tup):
+    ''' given a tuple of pairs, it returns whether the given tuple is 
+    is an idempotent
+    For example, 
+    1. if tup = ((1,2),(2,1)) then returns false
+    2. if tup = ((1,1), (2,2)) then returns true
+    '''
 
 def safeMultiply(a, b):
     """Safely multiply the two sides using __mul__ and __rmul__. Return
@@ -560,24 +874,37 @@ dict3=   SummableDict({
   "z": 1
 })
 
-
-print(type([dict2, dict2]))
-
-# Note that add and sub is only for two, and i means 'other' is a list 
-print("___add___")
-print(__add__(dict1,dict2))
-print("___iadd___")
-print(__iadd__(dict1,[dict2, dict3]))
-print("___sub___")
-print(__sub__(dict1,dict2))
-print("____isub____")
-print(__isub__(dict1,dict2))
-
-#a = generate_subset(5,2)
+#a = generate_bijections_2(2,3)
 #print(a)
+##
+#print(type([dict2, dict2]))
 #
-dict11 = {(1,1):(1.5,2),(1,2):(1.5,1), (1,3):(1.5,3)}
-i = intersections(dict11, dict11, True)
-print(i)
+## Note that add and sub is only for two, and i means 'other' is a list 
+#print("___add___")
+#print(__add__(dict1,dict2))
+#print("___iadd___")
+#print(__iadd__(dict1,[dict2, dict3]))
+#print("___sub___")
+#print(__sub__(dict1,dict2))
+#print("____isub____")
+#print(__isub__(dict1,dict2))
+#
+##a = generate_subset(5,2)
+##print(a)
+##
+#dict11 = {(1,1):(1.5,2),(1,2):(1.5,1), (1,3):(1.5,3)}
+#i = intersections(dict11, dict11, True)
+#print(i)
+#
+#print(doescross_simple((4, 3), (3, 4)))
 
-print(doescross_simple((4, 3), (3, 4)))
+#lst = generate_bijections(3)
+#
+#print(lst)
+#print(len(lst))
+
+#print(generate_bijections(2))
+#print(generate_bijections_2(1,2))
+#print(len(generate_bijections_2(1,2)))
+
+print(len(combinations(2, 3)))
