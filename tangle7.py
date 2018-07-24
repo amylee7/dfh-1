@@ -7,8 +7,6 @@ from Algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
 from Algebra import E0
 from utility import get_domain, get_range, generate_bijections, combinations, \
                 get_domain_dict, get_range_dict
-
-
 '''Elementary tangles and its algebras'''
 
 class TANGLE:
@@ -29,10 +27,9 @@ class TANGLE:
     # if only_right_half = =True i.e leftmost cup, then l_pairs = {}
     # if only_right_half == True i.e leftmost cup, then r_pairs = {}
     
-                
+               
         self.pairs = pairs
         self.n = len(pairs) # assume unique pairs 
-        
         # Whether at the boundary
         #self.only_left_half = False  
         #self.only_right_half = False 
@@ -71,35 +68,26 @@ class TANGLE:
     def split_pairs(self,a, b, c, pairs):
         '''this method takes an elementary tangle with x coordinate values,
         a, b, and c and returns two dictionaries left_pairs, right_pairs
-        '''
-        
+        '''    
         pairs = pairs
-
         l_pairs = {}
-        r_pairs = {}
-        
+        r_pairs = {}     
         if (not(a == 0 or c == 100)):
             for key,value in pairs.items():
-   
                 if a in {key[0],value[0]}:
-                    l_pairs.update({key:value})
-                
+                    l_pairs.update({key:value}) 
                 elif c in {key[0],value[0]}:
                     r_pairs.update({key:value})
- 
         else:
         # remove the dummy pair
             for key,value in pairs.items():
                 if(key[0] == 0 or value[0] == 0) or (key[0] == 100 or \
                                                  value[0] == 100):
-                    key_name = key
-                    
+                    key_name = key                  
             del pairs[key_name]
-            
             if a == 0:
                 r_pairs = pairs
-                l_pairs = {}
-                
+                l_pairs = {}       
             else:
                 assert c == 100
                 l_pairs = pairs
@@ -114,14 +102,11 @@ class TANGLE:
         temp_left = self.l_pairs
         temp_right = self.r_pairs
         l_pairs_nc = {}
-        r_pairs_nc = {}
-        
+        r_pairs_nc = {}      
         #left half
-        l_pairs_nc = { k : temp_left[k] for k in set(temp_left) - set(self.caps) }
-        
+        l_pairs_nc = { k : temp_left[k] for k in set(temp_left) - set(self.caps) } 
         #right half
         r_pairs_nc = { k : temp_right[k] for k in set(temp_right) - set(self.cups) }
-        
         self.l_pairs_nc = l_pairs_nc
         self.r_pairs_nc = r_pairs_nc
         
@@ -130,11 +115,10 @@ class TANGLE:
     def add_cups_caps(self):
         ''' This method adds the cups and caps by splitting the index
         for example, if a cap is (1,5):(1,4) then it adds to 
-        l_pairs_wc (1,5):(1.5,4.5) and (1.5,4.5):(1,5)'''
+        l_pairs_wc (1,5):(1.5,4.5) and (1.5,4.5):(1,5)'''    
         
         # remove caps or cups
-        self.remove_cups_caps()
-        
+        self.remove_cups_caps()        
         #add caps or cups again --------------------------------
         l_pairs_wc = self.l_pairs_nc
         r_pairs_wc= self.r_pairs_nc
@@ -160,8 +144,7 @@ class TANGLE:
                         l_pairs_wc.update({key:new_pt, new_pt: value})
                         
                     else:
-                        raise TypeError("Something is wrong -- this is not a cap")
-         
+                        raise TypeError("Something is wrong -- this is not a cap")  
         #right half
         if self.cups != {}:
             if len(self.cups) != 1:
@@ -188,19 +171,16 @@ class TANGLE:
         
     def split_directions(self, left_half = True):
         ''' Returns two dictionary objects, `orient_right` and 
-        `orient_left` for those 
-        
-'''
+        `orient_left` for those pairs going left and right '''
+    
         self.add_cups_caps()
         orient_left = {}
-        orient_right = {}
-        
+        orient_right = {}   
         #left_half
         if left_half == True:
             pairs = self.l_pairs_wc
         else:
-            pairs = self.r_pairs_wc
-            
+            pairs = self.r_pairs_wc          
         for key, value in pairs.items():
             if orientation((key,value), True) == (1):
                 orient_right.update({key:value})
@@ -208,7 +188,6 @@ class TANGLE:
                 orient_left.update({key:value})
             else:
                 print("Something is wrong --add_cups_and_caps() did not work properly")
-        
         return orient_left, orient_right
                       
     def undirect_pairs_split(self): # useless cb and remove
@@ -232,7 +211,6 @@ class TANGLE:
             else:
                 #raise orient != (-1, 1)
                 self.ud_pairs_l.update({key:value}) # maintain
-                
                 
         # right half
         for key,value in self.r_pairs.items():
@@ -267,8 +245,7 @@ class TANGLE:
         
         # classify whether it belongs to left half or right half
         only_left_half = False
-        only_right_half = False
-        
+        only_right_half = False    
         if len(s) == 3:
             i_minus = min(s)  #i
             i_mid = st.median(s) # i+0.5
@@ -276,7 +253,6 @@ class TANGLE:
         else:
             print("Something is wrong -- tangle has less than three \
                    x coordinates.")
-        
         # for boundaries
         if i_minus == 0:
             only_right_half = True
@@ -295,8 +271,7 @@ class TANGLE:
     # 'l_boundary' is an dictionary of whose key is coordinate and value is 
     #dLT sign sequence 
         left = self.l_pairs
-        l_boundary = {}
-        
+        l_boundary = {}      
         # left boundary - that is only one cup
         if left == {}:
             pass
@@ -305,7 +280,6 @@ class TANGLE:
                 l_boundary.update(orientation_i((key,value),True))
         
         return l_boundary
-    
 
     def getright(self):
         '''returns the `right` dictionary object containing the right boundary.'''
@@ -314,7 +288,6 @@ class TANGLE:
     
         right = self.r_pairs
         r_boundary = {}
-        
         # right boundary - that is only one cap
         if right == {}:
             pass
@@ -329,21 +302,19 @@ class TANGLE:
     
     def num_alpha_right(self):
         ''' this method returns the size of A_{i+1}'''
-    
         return len(self.get_alpha_right())
         
     def num_beta(self):
         ''' this method returns n the size of B_{i+1}'''
         return len(self.get_beta())
-    
-        
+      
     def get_alpha_left(self):
         ''' returns possible alpha states:
             key : index s of alpha curve A_i
             value : coordinate
         '''
      # for each boundary points, make an alpha curve below( in y-axis 
-                                                          #shifted by 0.5)  
+                                                        #shifted by 0.5)  
         alpha = {}
         # if furthest left tangle 
         if self.left_boundary == {}:
@@ -369,7 +340,6 @@ class TANGLE:
             key : index is of alpha curve A_{i+1}
             value : coordinate
         '''
-        
         alpha = {}
         if self.right_boundary == {}:  # if furthest left tangle 
             alpha = {0:(100,1.5)}
@@ -393,12 +363,10 @@ class TANGLE:
         y-coordinates occupied in B by the tangle, including a cup or a cap
         '''
         self.occupied = set() # set of occupied y axis
-        
         #contribution from left half
         for value in list(self.ud_pairs_l.values()):
             if value[0] == self.i_mid: # not cap
                 self.occupied.add(value[1])
-            
             else:  # cap
                 #raise value[0] != self.i_mid
                 self.occupied.add(value[1])
@@ -406,26 +374,22 @@ class TANGLE:
         # contribution from right half
         for key in list(self.ud_pairs_r.keys()):
             if key[0] == self.i_mid: # not cup
-                self.occupied.add(key[1])
-                
+                self.occupied.add(key[1])       
             else: # cup
                 #raise key[0] != self.i_mid
                 self.occupied.add(key[1])
-
         return self.occupied
     
     def get_beta(self):
         ''' returns a dictionary object of possible alpha states:
             key : index s of alpha curve B_{i+1}
             value : coordinate
-        '''
-        
+        '''    
         self.occupied_B()
         b_occupied = list(self.occupied)
         b_occupied.sort()   
         beta = {}
-        s_i = len(b_occupied)
-        
+        s_i = len(b_occupied)   
         for i in range(s_i):
             y = b_occupied[i]
             beta.update({i:(self.i_mid, y - 0.5)})
@@ -461,7 +425,6 @@ class TANGLE:
         if is_left == True:
             alpha = tuple(sorted(i for i in range(self.num_alpha_left())))
             return complement(alpha,data)
-        
         else:
             alpha = tuple(sorted(i for i in range(self.num_alpha_right())))
             return complement(alpha,data)
@@ -475,11 +438,11 @@ class TANGLE:
     
     def big_gr(self,maslov, alexander):# cb and remove 
         raise NotImplementedError
+        
     def is_simple_tangle(self):
         '''adds true to the variable `is_simple`, when the tangle is a simple tangle' used for
         Simple_Strand'''
         self.is_simple = True
-    
     
     def getIdempotents(self, is_left): # cb and fill in
         '''Get the list of idempotents depending on variable `is_left`.
@@ -594,7 +557,6 @@ class Strands(tuple):
     where first tuple contains the strands on the left, first index alpha 
     where second tuple contains the strands on the right,second index alpha'''
     
-
     def __new__(cls, tangle, data):
         data_0 = tuple(sorted(data[0]))
         data_1 = tuple(sorted(data[1])) 
@@ -710,8 +672,7 @@ class Strands(tuple):
             if right_half == True: ## right half:
                 dict1 = self.tangle.orient_right_rhalf
                 dict2 = self.right_converted
-                num+= simple_intersections(dict1,dict2,False)
-                
+                num+= simple_intersections(dict1,dict2,False)     
         return num
     
     def strandCrossing(self, left_half = True): 
@@ -725,7 +686,6 @@ class Strands(tuple):
         if left_half = False:
             returns [((4,1), (1,5)),...]
         '''
-
         #left half
         if left_half ==True:
             left_half = []
@@ -762,13 +722,13 @@ class Strands(tuple):
         if left_half = False:
             returns [((4,1), (1,5)): (3,3),...]
         '''
+        pass
     
     def numCrossing(self, left_half = True):
         if left_half:
             return len(self.left_crossings)
         else:
             return len(self.right_crossings)
-    
     
     def convert_di(self):
         ''' Like convert() below, but double indexed:
@@ -792,7 +752,6 @@ class Strands(tuple):
         self.left_converted_di = left_converted
         self.right_converted_di = right_converted
         
-
     def convert(self):
         ''' Converts a given strand in a tuple format, to a dictionary format
         using the coordinates stored in its parent tangle.
@@ -824,24 +783,18 @@ class Strands(tuple):
         
         left_converted = {}
         right_converted ={}
-        
-        #left half
-        if is_left:
+        if is_left: #left half
             for strand in self[0]:
                 left_converted.update({strand[0]:strand[1]})
             return left_converted
-        
-        #right half
-        else:
+        else:  #right half
             for strand in self[1]:
-                right_converted.update({strand[0]:strand[1]})
-        
+                right_converted.update({strand[0]:strand[1]}) 
             return right_converted
 
 class StrandDiagram(Generator):
     ''' Represents a strand diagram of a tangle T_i
-       i.e., a generator of CT(T_i).'''
-    
+       i.e., a generator of CT(T_i).''' 
     # Note: need to check len(self) == len(self.tangle.beta)
     def __init__(self, parent, strands, left_idem = None, right_idem = None):
         '''Specifies Tangle, parent, and strands as a list of pairs'''
@@ -893,26 +846,23 @@ class StrandDiagram(Generator):
         ''' Returns the number of crossings between moving strands
         either left_half or right_half depending on `left_half'''
 
-        #left half
-        
-        if left_half ==True:
+        if left_half ==True: #left half
             left_half = 0
             left_strands = self.strands[0] # tuple of left srands
             
             l_num = len(left_strands) # of left strands
-            combinations = generate_subset(l_num - 1 , 2)
-            for combo in combinations:
+            combin = generate_subset(l_num - 1 , 2)
+            for combo in combin:
                 if doescross_simple(left_strands[combo[0]],left_strands[combo[1]]) == True:
                     left_half += 1
             return left_half
-        #right half
-        else:   
+        else: #right half  
             right_half = 0
             right_strands = self.strands[1] # tuple of right srands
             
             r_num = len(right_strands) # of right strands
-            combinations = generate_subset(r_num - 1 , 2)
-            for combo in combinations:
+            combin = generate_subset(r_num - 1 , 2)
+            for combo in combin:
                 if doescross_simple(right_strands[combo[0]],right_strands[combo[1]]) == True:
                     right_half += 1
     
@@ -949,8 +899,7 @@ class StrandDiagram(Generator):
                 num+= simple_intersections(dict1,dict2,False)
             
         if option == 3:
-            # tangle right & tangle right
-            
+            # tangle right & tangle right       
             if left_half == True: ## left half:
                 dict1 = self.tangle.orient_right_lhalf
                 num += simple_intersections(dict1,dict1,True)
@@ -1019,27 +968,21 @@ class Simple_Strand(Generator):
          if simple_strand connects 1 to 3, 3 to 4, it will contain
          ((1,3), (3,4))'''
         # parent here refers to the Strand Algebra
-        
-
         Generator.__init__(self,parent)
         self.p_tangle = parent.tangle # tangle that it takes its sign from 
         self.is_left = is_left
-        
         if self.is_left:
             self.sign_seq = self.p_tangle.left_boundary
         else:
             self.sign_seq = self.p_tangle.right_boundary
-        
         #check S and T in petkova paper:
         self.check_s_and_t(pairs)
-        
         # Instantiate Base Tangle and strand: 
         self.tangle = TANGLE(self.get_tangle_pairs())
         self.tangle.is_simple_tangle()
         self.strands = Strands(self.tangle, self.get_tuple_strand(pairs))
         self.maslov = self.maslov()
         self.alexander = self.alexander()
-     
     
     def __eq__(self, other):
         return self.parent == other.parent and self.strands == other.strands
@@ -1097,13 +1040,11 @@ class Simple_Strand(Generator):
         
     def get_tuple_strand(self,pairs): # cb an change
         ''' returns the tuple that is needed for strand object '''
-        
         # quite necessary - will come back and remove if unncessary
         #if self.is_left true, then make bijections look  --- then up/down
         if self.is_left == True:
             right_half = tuple((k,k) for k in self.t)
-            return tuple(( right_half, pairs))
-        
+            return tuple(( right_half, pairs))  
         # if self.is_left False, then make bijections look like up/down then ----
         else:
             left_half = tuple((k,k) for k in self.s)
@@ -1215,8 +1156,7 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
             s2 = cross[1][0] #1
             
             # check mod relations ( black crosses twice)
-        
-         
+              
     def diff(self, gen):  
         result = E0
         if self.ring is F2:
@@ -1231,16 +1171,13 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
         Given a pair of strand crossing, such as ((((4,2),(1,3)))), 
         returns whether has Figure 6 Mod relations'''
         
-    
-
-    
     def getGenerators(self): # cb and fill in 
         ''' Returns the list of generators.'''
         pass
     
     def getIdempotents(self): #cb and fill in
         ''' Returns the set of Idempotents, using the corresponding function in PMC'''
-    
+        pass
     
     def _multiplyRaw(self, gen1, gen2, horizontal_left = True):
         ''' If gen1 and gen2 can be multiplied, return the generator that is
@@ -1251,7 +1188,6 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
         
         if self.mod_6(gen1, gen2):
             return None
-        
         else:
             left_strands = gen1.strands.convert_dict(True)
             right_strands = gen2.strands.convert_dict(False)
@@ -1264,7 +1200,6 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
             
             return Simple_Strand(self, horizontal_left, new_pairs)
                 
-        
     def multiply(self, gen1, gen2):
         
         if not isinstance(gen1, Simple_Strand):
@@ -1298,8 +1233,7 @@ class StrandAlgebra(DGAlgebra): #THE PARENT OF  STRAND Algebra
         
         return len(self.mult_two_halfs(l_tangle, l_strands, r_tangle, r_strands)) > 0 \
                 or len(self.cross_twice(l_strands, r_strands, c_l, c_r)) > 0
-    
-    
+        
     ## helper methods for mod 6() 
     def mult_two_halfs(left_tangle, left_strands, right_tangle, right_strands):
         ''' Multiplies two half tangles T1 and T2, and mod out first two
