@@ -31,14 +31,9 @@ class TANGLE:
         self.n = len(pairs) # assume unique pairs 
         # Whether at the boundary
         #self.only_left_half = False  
-        #self.only_right_half = False 
-        
-        self.i_minus, self.i_mid, self.i_plus, self.only_left_half, \
-                self.only_right_half =  self.get_x_coord(self.pairs)
-     
-        self.l_pairs, self.r_pairs = self.split_pairs(self.i_minus, \
-                                     self.i_mid, self.i_plus, self.pairs)
-        
+        #self.only_right_half = False   
+        self.i_minus, self.i_mid, self.i_plus, self.only_left_half,self.only_right_half =  self.get_x_coord(self.pairs)  
+        self.l_pairs, self.r_pairs = self.split_pairs(self.i_minus,self.i_mid, self.i_plus, self.pairs)
         self.left_boundary = self.getleft()
         self.right_boundary = self.getright()
         self.undirect_pairs_split()
@@ -62,8 +57,7 @@ class TANGLE:
     
     def split_pairs(self,a, b, c, pairs):
         '''this method takes an elementary tangle with x coordinate values,
-        a, b, and c and returns two dictionaries left_pairs, right_pairs
-        '''    
+        a, b, and c and returns two dictionaries left_pairs, right_pairs.'''   
         pairs = pairs
         l_pairs = {}
         r_pairs = {}     
@@ -84,24 +78,20 @@ class TANGLE:
             else:
                 assert c == 100
                 l_pairs = pairs
-                r_pairs = {}
-        
+                r_pairs = {}      
         return l_pairs,r_pairs
     
     def remove_cups_caps(self):
         ''' returns two dictionary objects, l_rpairs_nc, r_rpairs_nc
-        that are l_pairs and r_pairs with removed caps or caps'''
-        
+        that are l_pairs and r_pairs with removed caps or caps'''     
         temp_left = self.l_pairs
         temp_right = self.r_pairs
         l_pairs_nc = {}
-        r_pairs_nc = {}      
-        
+        r_pairs_nc = {}            
         #left half
         l_pairs_nc = { k : temp_left[k] for k in set(temp_left) - set(self.caps) } 
         #right half
         r_pairs_nc = { k : temp_right[k] for k in set(temp_right) - set(self.cups) }
-        
         self.l_pairs_nc = l_pairs_nc
         self.r_pairs_nc = r_pairs_nc 
         return l_pairs_nc, r_pairs_nc
@@ -109,14 +99,12 @@ class TANGLE:
     def add_cups_caps(self):
         ''' This method adds the cups and caps by splitting the index
         for example, if a cap is (1,5):(1,4) then it adds to 
-        l_pairs_wc (1,5):(1.5,4.5) and (1.5,4.5):(1,5)'''    
-        
+        l_pairs_wc (1,5):(1.5,4.5) and (1.5,4.5):(1,5)'''          
         # remove caps or cups
         self.remove_cups_caps()        
         #add caps or cups again --------------------------------
         l_pairs_wc = self.l_pairs_nc
-        r_pairs_wc= self.r_pairs_nc
-        
+        r_pairs_wc= self.r_pairs_nc   
         if self.caps != {}:#left half
             if len(self.caps) != 1:
                 assert TypeError("Something is wrong -- more than one caps")    
@@ -124,21 +112,17 @@ class TANGLE:
                 for key, value in self.caps.items():            
                     # If cap
                     if orientation((key,value),True) == (-1, 1) or \
-                    orientation((key,value),True) == (1, -1): 
-                        
+                    orientation((key,value),True) == (1, -1):                        
                         if (key[0] + 0.5) != self.i_mid:
                                 raise TypeError("Something is wrong with cap length")
-                   
                         new_pt = (key[0]+ 0.5, min(key[1],value[1]) + 0.5)
-                        l_pairs_wc.update({key:new_pt, new_pt: value})
-                        
+                        l_pairs_wc.update({key:new_pt, new_pt: value})                        
                     else:
                         raise TypeError("Something is wrong -- this is not a cap")  
                         
         if self.cups != {}: #right half
             if len(self.cups) != 1:
-                assert TypeError("Something is wrong -- more than one cups")
-            
+                assert TypeError("Something is wrong -- more than one cups")          
             else: # there is one cup
                 for key, value in self.cups.items():  
                     #if cup
@@ -150,14 +134,12 @@ class TANGLE:
                         r_pairs_wc.update({key:new_pt,new_pt: value})    
                     else:
                         raise TypeError("Something is wrong -- this is not a cup")
-
         self.l_pairs_wc = l_pairs_wc
         self.r_pairs_wc = r_pairs_wc
         
     def split_directions(self, left_half = True):
         ''' Returns two dictionary objects, `orient_right` and 
-        `orient_left` for those pairs going left and right '''
-    
+        `orient_left` for those pairs going left and right ''' 
         self.get_cups()
         self.get_caps()
         self.remove_cups_caps() 
@@ -185,8 +167,7 @@ class TANGLE:
         it goes from left to right. fixes orientation for 
         caps or cups as well such that it always goes clockwise'''  
         self.ud_pairs_l = {}
-        self.ud_pairs_r = {}
-        
+        self.ud_pairs_r = {}   
         # left right
         for key,value in self.l_pairs.items(): 
             orient = orientation((key,value), True)     
@@ -198,9 +179,7 @@ class TANGLE:
             elif orient == (1, -1):
                 self.ud_pairs_l.update({value:key}) # reverse
             else:
-                #raise orient != (-1, 1)
-                self.ud_pairs_l.update({key:value}) # maintain
-          
+                self.ud_pairs_l.update({key:value}) # maintain 
         # right half
         for key,value in self.r_pairs.items():
             orient = orientation((key,value), False)
@@ -212,9 +191,7 @@ class TANGLE:
             elif orient == (1, -1):
                 self.ud_pairs_r.update({value:key}) # reverse
             else:
-                #raise orient != (-1,1)
                 self.ud_pairs_r.update({key:value}) # maintain
-    
         return self.ud_pairs_l, self.ud_pairs_r
     
     def undirect_pairs(self):
@@ -239,9 +216,8 @@ class TANGLE:
             i_plus= max(s) #i + 1
         else:
             print("Something is wrong -- tangle has less than three \
-                   x coordinates.")
-        # for boundaries
-        if i_minus == 0:
+                   x coordinates.")       
+        if i_minus == 0: # for boundaries
             only_right_half = True
         if i_plus == 100:
             only_left_half = True
@@ -255,16 +231,13 @@ class TANGLE:
             left = {}, right = {(1,0):-1, (1,1):1}.'''  
     # 'l_boundary' is an dictionary of whose key is coordinate and value is 
     #dLT sign sequence 
-    
         left = self.l_pairs
         l_boundary = {}      
-        # left boundary - that is only one cup
-        if left == {}:
+        if left == {}: # left boundary - that is only one cup
             pass
         else:
             for key, value in left.items():
                 l_boundary.update(orientation_i((key,value),True))
-        
         return l_boundary
 
     def getright(self):
@@ -298,8 +271,7 @@ class TANGLE:
             key : index s of alpha curve A_i
             value : coordinate
         '''
-     # for each boundary points, make an alpha curve below( in y-axis 
-                                                        #shifted by 0.5)  
+     # for each boundary points, make an alpha curve below( in y-axis shifted by 0.5)
         alpha = {}
         # if furthest left tangle 
         if self.left_boundary == {}:
@@ -315,7 +287,6 @@ class TANGLE:
             # add the top alpha curve
             x, y = coord[s_i -1]
             alpha.update({s_i: (x, y+ 0.5)})
-    
         return alpha
     
     def get_alpha_right(self):
@@ -330,14 +301,12 @@ class TANGLE:
             s_i = len(self.right_boundary) # number of tangles touching boundary
             coord = list(self.right_boundary.keys())
             coord.sort() #sort coordinates, in case it is not sorted
-            
             for i in range(s_i):
                 x, y = coord[i]
                 alpha.update({i:(x,(y-0.5))})
             
             x, y = coord[s_i -1] # add the top alpha curve
-            alpha.update({s_i: (x, y+ 0.5)})
-    
+            alpha.update({s_i: (x, y+ 0.5)}) 
         return alpha
     
     def occupied_B(self):
@@ -503,8 +472,7 @@ class Idempotent(tuple):
                 np1 = (coord[0] + 0.5, coord[1])
                 np2 = (coord[0] + 1, coord[1])
                 if sign == -1:
-                    pairs.update({np2:np1, np1:coord})
-                    
+                    pairs.update({np2:np1, np1:coord})      
                 else:
                     if sign != 1:
                         raise ValueError("Something is wrong with the sign")
@@ -657,8 +625,7 @@ class Strands(tuple):
         '''
         if left_half:  #left half
             left_half = []
-            left_strands = self.data[0] # tuple of left srands
-            
+            left_strands = self.data[0] # tuple of left strands         
             l_num = len(left_strands) # of left strands
             combinations = generate_subset(l_num - 1 , 2)
             for combo in combinations:
@@ -667,16 +634,15 @@ class Strands(tuple):
             return left_half
         else:  #right half
             right_half = []
-            right_strands = self.data[1] # tuple of right srands
+            right_strands = self.data[1] # tuple of right strands
             
             r_num = len(right_strands) # of right strands
             combinations = generate_subset(r_num - 1 , 2)
             for combo in combinations:
                 if doescross_simple(right_strands[combo[0]],right_strands[combo[1]]) == True:
                     right_half.append((right_strands[combo[0]],right_strands[combo[1]]))
-    
             return right_half
-      
+  
     def numCrossing(self, left_half = True):
         if left_half:
             return len(self.left_crossings)
@@ -697,7 +663,6 @@ class Strands(tuple):
             new_v = self.convert_s_to_coord(v, left_half)
             #print("new_v{0}".format(new_v))
             converted.update({new_k: new_v})
-
         return converted
     
     def convert_s_to_coord(self, tup, is_left = True): # check remove
