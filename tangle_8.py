@@ -308,12 +308,10 @@ class TANGLE:
             assert self.left_boundary != {} #assert error if otherwise
             s_i = len(self.left_boundary) # number of tangles touching boundary
             coord = list(self.left_boundary.keys())
-            coord.sort() #sort coordinates, in case it is not sorted
-            
+            coord.sort() #sort coordinates, in case it is not sorted 
             for i in range(s_i):
                 x, y = coord[i]
-                alpha.update({i:(x,(y-0.5))})
-            
+                alpha.update({i:(x,(y-0.5))})       
             # add the top alpha curve
             x, y = coord[s_i -1]
             alpha.update({s_i: (x, y+ 0.5)})
@@ -323,8 +321,7 @@ class TANGLE:
     def get_alpha_right(self):
         ''' returns possible alpha states:
             key : index is of alpha curve A_{i+1}
-            value : coordinate
-        '''
+            value : coordinate '''
         alpha = {}
         if self.right_boundary == {}:  # if furthest left tangle 
             alpha = {0:(100,1.5)}
@@ -1179,8 +1176,8 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
             
             # double crossing between strands
             dc_strand = False
-            dic.remove(s_pair[0])
-            dic.remove(s_pair[1])
+            dic.pop(s_pair[0])
+            dic.pop(s_pair[1])
             strands = list(dic.values())
             for strand in strands:
                 if doescross_simple((a_1,inter),strand): # upperhalf
