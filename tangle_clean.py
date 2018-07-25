@@ -6,7 +6,8 @@ from utility import orientation,orientation_i, complement,generate_subset,\
 from Algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
 from Algebra import E0
 from utility import get_domain, get_range, generate_bijections, combinations, \
-                get_domain_dict, get_range_dict
+                get_domain_dict, get_range_dict, doescross_simple_rc,in_between_list, \
+                reorganize_sign
 '''Elementary tangles and its algebras'''
 
 class TANGLE:
@@ -44,9 +45,6 @@ class TANGLE:
         self.alpha_left = self.get_alpha_left()
         self.alpha_right = self.get_alpha_right()
         self.beta = self.get_beta()
-        self.get_cups()
-        self.get_caps()
-        self.remove_cups_caps()        
         self.orient_left_lhalf, self.orient_right_lhalf = self.split_directions(True)
         self.orient_left_rhalf, self.orient_right_rhalf = self.split_directions(False)
                 
@@ -168,7 +166,11 @@ class TANGLE:
         ''' Returns two dictionary objects, `orient_right` and 
         `orient_left` for those pairs going left and right '''
     
+        self.get_cups()
+        self.get_caps()
+        self.remove_cups_caps() 
         self.add_cups_caps()
+        
         orient_left = {}
         orient_right = {}   
         
@@ -496,20 +498,29 @@ class Idempotent(tuple):
             return "(%s)" % " , ".join(str(i) + ":" + str(self.p_tangle.alpha_right[i]) for i in self)
     
     def get_tangle_pairs(self):
-        ''' returns the dictionary object that is needed to make a new tangle.'''
+        ''' returns the dictionary object that is needed to make a new tangle.'''   
         pairs = {}
         for coord,sign in self.sign_seq.items():
-                
-            np1 = (coord[0] - 0.5, coord[1])
-            np2 = (coord[0] - 1, coord[1])
-            if sign == -1:
-                pairs.update({coord: np1, np1: np2})
+            if self.is_left:
+                np1 = (coord[0] - 0.5, coord[1])
+                np2 = (coord[0] - 1, coord[1])
+                if sign == -1:
+                    pairs.update({coord: np1, np1: np2})
+                else:
+                    if sign != 1:
+                        raise ValueError("Something is wrong with the sign")
+                    pairs.update({np2:np1, np1:coord})
             else:
-                if sign != 1:
-                    raise ValueError("Something is wrong with the sign")
-                pairs.update({np2:np1, np1:coord})      
-        return pairs    
-    
+                np1 = (coord[0] + 0.5, coord[1])
+                np2 = (coord[0] + 1, coord[1])
+                if sign == -1:
+                    pairs.update({np2:np1, np1:coord})
+                    
+                else:
+                    if sign != 1:
+                        raise ValueError("Something is wrong with the sign")
+                    pairs.update({coord: np1, np1: np2})
+   
     def get_tup(self):
         return tuple((k,k) for k in self)
             
@@ -539,7 +550,7 @@ class Strands(tuple):
     def __init__(self, tangle, data):
         self.tangle = tangle
         self.data = data
-        self.convert()
+        self.convert() # cb and remove later
         self.converted  = self.left_converted.copy()
         self.converted.update(self.right_converted)
         self.left_crossings = self.strandCrossing(True) #list of crossings on the left
@@ -689,8 +700,23 @@ class Strands(tuple):
         if left_half = False:
             returns [((4,1), (1,5)): (3,3),...]
         '''
-        pass
     
+    def convert_strand_to_coord(tup, is_left = True):
+        ''' Given a tuple pair say (2,3) it gives tuple of corresponding coordinates
+        in tuples. if is_left == True,
+        if 2 refers to (2,3.5) and 
+        if 3 refers to (2.5,4.5) in actual coordinates,
+        then returns (((2,3.5),(2.5,4.5))'''
+        
+        if is_left:
+            left = self.tangle.alpha_left
+            right = self.tangle.beta
+        else:
+            left = self.tangle.beta
+            right = self.tangle.alpha_right
+        
+        return (left[tup[0]],right[tup[1]])
+                 
     def numCrossing(self, left_half = True):
         if left_half:
             return len(self.left_crossings)
@@ -973,21 +999,38 @@ class Simple_Strand(Generator):
         if len(self.s) != len(self.t):
             raise ValueError("Something is wrong -- S and T do not have the same size.")
             
-    def get_tangle_pairs(self):
+    def get_tangle_pairs(self): # in Simple Strand
         ''' returns the dictionary object that is needed to make a new tangle.'''
         pairs = {}
         for coord,sign in self.sign_seq.items():
-                
-            np1 = (coord[0] - 0.5, coord[1])
-            np2 = (coord[0] - 1, coord[1])
-            if sign == -1:
-                pairs.update({coord: np1, np1: np2})
+            if self.is_left:
+                np1 = (coord[0] - 0.5, coord[1])
+                np2 = (coord[0] - 1, coord[1])
+                if sign == -1:
+                    pairs.update({coord: np1, np1: np2})
+                else:
+                    if sign != 1:
+                        raise ValueError("Something is wrong with the sign")
+                    pairs.update({np2:np1, np1:coord})
             else:
-                if sign != 1:
-                    raise ValueError("Something is wrong with the sign")
-                pairs.update({np2:np1, np1:coord})
+                np1 = (coord[0] + 0.5, coord[1])
+                np2 = (coord[0] + 1, coord[1])
+                if sign == -1:
+                    pairs.update({np2:np1, np1:coord})
+                    
+                else:
+                    if sign != 1:
+                        raise ValueError("Something is wrong with the sign")
+                    pairs.update({coord: np1, np1: np2})
                 
         return pairs
+    
+    def get_tangle_heights(self): # cb and remove
+        ''' Goes through each tangle, and gives its height'''
+        heights = []
+        for coord in self.sign_seq.keys():
+            heights.append(coord[1])
+        return heights
         
     def get_tuple_strand(self,pairs): # cb an change
         ''' returns the tuple that is needed for strand object '''
@@ -1099,15 +1142,57 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
         strands. Together they specify all terms in gen.diff(). '''
         
         lst = []
-        is_left = self.strands.is_left # strand left or right 인지
-        strand_crossing = self.strands(self, not is_left)
-        for cross in strand_crossing: # ex) ((4,2),(1,3))
-            
+        take_left = not(gen.is_left) # whether to take left half of the tangle( horizontal tangle)
+        strands_crossing = gen.strands.strandCrossing(take_left)
+        
+        if take_left:
+            tangles = list(gen.tangle.l_pairs.items())
+        else:
+            tangles = list(gen.tangle.r_pairs.items())
+        
+        t1 = min(tangles[0][0][0], tangles[0][1][0])
+        t2 = max(tangles[0][0][0], tangles[0][1][0])
+        
+        if abs(t1 - t2) >= 1:
+            raise TypeError("Something is wrong- tangle width is longer than 0.5")
+        
+        for cross in strands_crossing: # ex) ((4,2),(1,3))
             s1 = cross[0][0] #4
             s2 = cross[1][0] #1
+        
+            a1,a2,b1,b2 = reorganize_sign(cross)
+            a_1 = (t1,a1)
+            b_1 = (t1, b1)
+            a_2 = (t2, a2)
+            b_2 = (t2, b2)
             
-            # check mod relations ( black crosses twice)
-              
+            inter = doescross_simple_rc((a_1,a_2),(b_1,b_2))
+            
+            #  A strand double crossing a tangle          
+            arr = [] 
+            for tang in tangles:
+                if doescross_simple((a_1,inter),tang):#upper half
+                    if doescross_simple((inter,b2)):
+                        arr.append(tang)      
+                if doescross_simple((b_1,inter),tang): # lower half
+                    if doescross_simple((inter,a2)):
+                        arr.append(tang)
+    
+            mod_6 = (len(arr) > 0)
+        
+        #check whether strands double cross:
+        
+        
+    def diff_helper(self, gen):
+        '''helper method for diffRaw:
+        Given a pair of strand crossing, such as ((((4,2),(1,3)))), 
+        returns whether has Figure 6 Mod relations.
+        returns True, if yes, '''
+    
+    
+    
+    
+    
     def diff(self, gen):  
         result = E0
         if self.ring is F2:
@@ -1117,7 +1202,7 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
             return NotImplemented
         return result
 
-    def diff_helper(self, pair):
+    def diff_helper(self, gen):
         '''helper method for diffRaw:
         Given a pair of strand crossing, such as ((((4,2),(1,3)))), 
         returns whether has Figure 6 Mod relations.'''
@@ -1134,8 +1219,8 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
         ''' If gen1 and gen2 can be multiplied, return the generator that is
         their product. Otherwise, return None.
         gen1 and gen2 are compatible by default.
-        if horizontal_left = True, this means make strands as - then up or down.
-        if horizontal_right = False, this means strands are up then down.'''
+        if horizontal_left = True, this means make strands as -- then up or down.
+        if horizontal_right = False, this means strands are up or down then --.'''
         if self.mod_6(gen1, gen2):
             return None
         else:
@@ -1254,79 +1339,5 @@ class StrandAlgebraElement(Element):
                 return False
         return True
 
-############################### TEST CODE ################################### 
-
-#cross = (((0,3),(3,2)), ((0,3),(3,1)))
-##test code
-##cross = {(0,1):(1,2), (0,2):(1,1)}
-#cross_dict = {(0,1):(3,2), (0,2):(3,1)}
-#a = TANGLE(cross_dict)
-#  
-#cup = {(1,1): (1,2)}
-# 
-#cap = {(0,1): (0,0)}
- 
-#newstrand = Strands(a, cross)    
-#print(newstrand)
-
-#elementary tangle with one crossing
-t_1 = {(0.5,1):(0,1),(1,1):(1,2)}
-t_2 = {(1,2):(1.5,1),(1.5,2):(1,1),(2,2):(1.5,2),(2,1):(1.5,1)}
-t_3 = {(2,1):(2,2), (2.5,1):(100,1)}
-print("tangle program starts")
-#tangle
-t_4 = {(1,1):(1.5,2),(1,2):(1.5,1),(1.5,3):(1,3),(1,6):(1.5,6),(1.5,1):(2,1),\
-       (1.5,2):(2,2),(2,3):(1.5,3),(1.5,6):(2,6), (2,4):(2,5)}
-#tang= TANGLE(t_4)
-
-t_5= {(3,1):(3.5,2),(3,2):(3.5,1),(3.5,3):(3,3),(3,6):(3.5,6),(3.5,1):(4,1),\
-       (3.5,2):(4,2),(4,3):(3.5,3),(3.5,6):(4,6), (4,4):(4,5)}
-
-tang= TANGLE(t_5)
-print(tang)
-
-#data1 = ((3,5),(0,1))
-#data2 = ((4,5),(3,2),(2,4),(0,0))
-#data = tuple([data1,data2])
-#stran = Strands(tang, data)
-#print(stran)
-#
-
-#print(stran.left_converted)
-#print(stran.right_converted)
-#data = (1,3)
-#i = Idempotent(tang, data, False)
-#print(i)
-#print(i.comp_idem())
-#
-#data1 = ((4,3),(3,4),(1,0),(0,1))
-#data2 = ((5,2),(2,6))
-#
-#data1 = ((0,1),(3,5))
-#data2 = ((4,5), (2,4),(3,2), (0,0))
-#data = tuple([data1,data2])
-#stran = Strands(tang, data)
-
-
-#print("left_crossings")
-#print(stran.left_crossings)
-#print(stran.numCrossing(True))
-#print("right_crossings")
-#print(stran.right_crossings)
-#print(stran.numCrossing(False))
-#print(stran.maslov())
-#print(stran.alexander())
-###
-##Testing numcross
-#data3 = ((0,1),(1,0),(3,4),(4,3))
-#data4 = ((5,2),(2,6))
-#data5 = tuple([data3,data4])
-#stran = Strands(tang,data5)
-#print(stran.numCrossing())
-
-#left_idem = Idempotent(tang,(0,2), True)
-#print(stran.leftCompatible(left_idem))
-
-
-
+############################### TEST CODE ###################################
 
