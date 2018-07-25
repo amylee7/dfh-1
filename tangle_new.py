@@ -7,7 +7,8 @@ from Algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
 from Algebra import E0
 from utility import get_domain, get_range, generate_bijections, combinations, \
                 get_domain_dict, get_range_dict, doescross_simple_rc,in_between_list, \
-                reorganize_sign, reorganize_sign_2,dict_shift
+                reorganize_sign, reorganize_sign_2,dict_shift, get_start_dict, get_end_dict,\
+                dict_shift_double, doescross_bool
 '''Elementary tangles and its algebras'''
 
 class TANGLE:
@@ -542,7 +543,7 @@ class Strands(tuple):
         self.converted  = self.left_converted.copy()
         self.converted.update(self.right_converted)
         self.left_crossings = self.strandCrossing(True) #list of crossings on the left
-        self.right_crossings = self.strandCrossing(False)
+        self.right_crossings = self.strandCrossing(False)        
      
     def __eq__(self,other):
         if isinstance(other, Strands):
@@ -654,7 +655,7 @@ class Strands(tuple):
         if left_half = False:
             returns [((4,1), (1,5)),...]
         '''
-        if left_half ==True: #left half
+        if left_half:  #left half
             left_half = []
             left_strands = self.data[0] # tuple of left srands
             
@@ -689,13 +690,14 @@ class Strands(tuple):
             raw = self.left_crossings
         else:
             raw = self.right_crossings
-        converted = {}
-        
+        converted = {}      
         for k, v in raw:
             new_k = self.convert_s_to_coord(k, left_half)
+           #print("new_k{0}".format(new_k))
             new_v = self.convert_s_to_coord(v, left_half)
-            converted.update({new_k, new_v})
-        
+            #print("new_v{0}".format(new_v))
+            converted.update({new_k: new_v})
+
         return converted
     
     def convert_s_to_coord(self, tup, is_left = True): # check remove
@@ -950,6 +952,7 @@ class Simple_Strand(Generator):
         #check S and T in petkova paper:
         self.check_s_and_t(pairs)
         # Instantiate Base Tangle and strand: 
+        self.pairs = pairs
         self.tangle = TANGLE(self.get_tangle_pairs())
         self.tangle.is_simple_tangle()
         self.strands = Strands(self.tangle, self.get_tuple_strand(pairs))
@@ -970,6 +973,9 @@ class Simple_Strand(Generator):
     
     def __repr__(self):
         return str(self)
+    
+    def copy(self):
+        return Simple_Strand(self.parent, self.is_left, self.pairs)
     
     def check_s_and_t(self,pairs):
         '''Helper method for __init__ to check whether a Strand Algebra Generator
@@ -1135,7 +1141,7 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
         diff_term is a generator in gen.diff() obtained by uncrossing these two
         strands. Together they specify all terms in gen.diff(). ''' 
         lst = []
-        valid_crossings = self.diff_helper_1(self,gen) # pairs of crossing strands that are not in figure 6 relations
+        valid_crossings = self.diff_helper_1(gen) # pairs of crossing strands that are not in figure 6 relations
         for cross in valid_crossings:
             s1 = cross[0][0]
             s2 = cross[1][0]
@@ -1143,9 +1149,10 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
             diff_term = gen.copy()
             diff_term.strands.remove(cross)
             diff_term.strands.append(((a1,b2),(b1,a2)))
+            
             lst.append((s1,s2, diff_term)) 
         return lst
-    
+            
     def diff_helper_1(self,gen):
         '''helper method for diffRaw:
          returns pairs of crossing strands that are not in figure 6 relations
@@ -1165,41 +1172,43 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
             tangles = list(gen.tangle.r_pairs.items())
             t1 = gen.tangle.i_mid
             t2 = gen.tangle.i_plus
-        
+                      
         if abs(t1 - t2) >= 1:
             raise TypeError("Something is wrong- tangle width is longer than 0.5")
         
         for s_pair in strands_crossing: # for each (s1,s2)
+            #print("STRAND PAIR: {0}".format(s_pair))
             a_1,a_2,b_1,b_2 = reorganize_sign_2(s_pair, dic) # cb and change  assume a1, a2 are coordinates
-            inter = doescross_simple_rc((a_1,a_2),(b_1,b_2))
+            inter = doescross((a_1,a_2),(b_1,b_2))
             
             # A strand double-crossing a tangle:
             dc_tangle = False
             for tang in tangles:
-                if doescross_simple((a_1,inter),tang): # upperhalf
-                    if doescross_simple((inter, b_2),tang):
+                if doescross_bool((a_1,inter),tang): # upperhalf
+                    if doescross_bool((inter, b_2),tang):
                         dc_tangle = True
-                if doescross_simple((b_1,inter),tang): # lower half
-                    if doescross_simple((inter,a_2),tang):
+                if doescross_bool((b_1,inter),tang): # lower half
+                    if doescross_bool((inter,a_2),tang):
                         dc_tangle = True
             
-            # double crossing between strands
+            # double crossing between strands 
             dc_strand = False
-            dic.pop(s_pair[0])
-            dic.pop(s_pair[1])
-            strands = list(dic.values())
+            raw = dic.copy()
+            raw.pop(s_pair[0])
+            raw.pop(s_pair[1])
+            strands = list(raw.values())
             for strand in strands:
-                if doescross_simple((a_1,inter),strand): # upperhalf
-                    if doescross_simple((inter, b_2),strand):
+                if doescross_bool((a_1,inter),strand): # upperhalf
+                    if doescross_bool((inter, b_2),strand):
                         dc_strand = True
-                if doescross_simple((b_1,inter),strand): # lower half
-                    if doescross_simple((inter,a_2),strand):
+                if doescross_bool((b_1,inter),strand): # lower half
+                    if doescross_bool((inter,a_2),strand):
                          dc_strand = True
             
             if dc_tangle == False and dc_strand ==False:
                 arr.append(s_pair)
-            
-            return arr
+        
+        return arr
             
     def getGenerators(self): # cb and fill in 
         ''' Returns the list of generators.'''
@@ -1253,24 +1262,22 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
         if self.is_left: # left side of the tangle
             l_strands = gen1.strands.right_converted
             r_strands = gen2.strands.right_converted
-            c_l = gen1.strands.strandCrossing_coord(False)
-            c_r = gen2.strands.strandCrossing_coord(False)
         else: # right side of the tangle
             l_strands = gen1.strands.left_converted
             r_strands = gen2.strands.left_converted
-            c_l = gen1.strands.strandCrossing_coord(True)
-            c_r = gen2.strands.strandCrossing_coord(True)
             
+        c_l = gen1.strands.strandCrossing_coord(not self.is_left)
+        c_r = gen2.strands.strandCrossing_coord(not self.is_left)   
         l_tangle = [gen1.tangle.orient_right_lhalf, gen1.tangle.orient_left_lhalf]
         r_tangle = [gen2.tangle.orient_right_rhalf, gen2.tangle.orient_left_rhalf]
         
-        print("Entering : Mod 6")
-        print("\nl_strands: {0}".format(l_strands))
-        print("\nr_strands: {0}".format(r_strands))
-        print("\nc_l: {0}".format(c_l))
-        print("\nc_r: {0}".format(c_r))
-        print("\nl_tangle {0}".format(l_tangle))
-        print("\nr_tangle {0}".format(r_tangle))
+#        print("Entering : Mod 6") #cb and remove
+#        print("\nl_strands: {0}".format(l_strands))
+#        print("\nr_strands: {0}".format(r_strands))
+#        print("\nc_l: {0}".format(c_l))
+#        print("\nc_r: {0}".format(c_r))
+#        print("\nl_tangle {0}".format(l_tangle))
+#        print("\nr_tangle {0}".format(r_tangle))
 ##        
         return len(self.mult_two_halfs(l_tangle, l_strands, r_tangle, r_strands)) > 0 \
                 or len(self.cross_twice(l_strands, r_strands, c_l, c_r)) > 0
@@ -1290,67 +1297,34 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
         # cb and change it to true or false later if uncessary
         # cb and fix - need to consider left or right        
         #assume split_cup and cap for now cb and check with akram
-
         pairs = []
-        # tangle orienting right
-        
+        # tangle orienting right      
         t1 = left_tangle[0]
-        t2 = right_tangle[0]
-        
+        t2 = right_tangle[0]   
         if(self.is_left): # left side of  the tangle
-            left_strands = dict_shift(left_strands,True)
+            left_strands = dict_shift(left_strands,True)# shift left_strand to the right
         else:
-            right_strands = dict_shift(right_strands,False)
-        
-        print("++++++++++++++++++")
-        print(t1)
-        print(t2)
-        print(left_strands)
-        print(right_strands)
-        print("+++++++++++++++++")
+            right_strands = dict_shift(right_strands,False) # shift left_strand to the right      
     
         for k,v in t1.items():
-#            cur_tang = tuple([k,v])
-#            print("\nLeft Tangle:{0}".format(cur_tang))
             for a,b in left_strands.items():
-#                cur_str = tuple([a,b])
-#                print("** left Strand:{0}".format(cur_str))
                 if doescross((k,v),(a,b)):
-#                    print("FIRST CROSS!")
                     new_tangle = (v,t2[v]) # on the right
                     new_strand = (b, right_strands[b]) # on the right
-#                    print("Right Tangle:{0}".format(new_tangle))
-#                    print("Right Strand:{0}".format(new_strand))
                     if doescross(new_tangle, new_strand):
-                       # print("Double Cross! \n")
-                        pairs.append([k,a])                 
+                        pairs.append([k,a])       
         # tangle orienting left
-        
         t1 = left_tangle[1]
-        t2 = right_tangle[1]        
-                
-        print("+++++++++++++")
-        print(t1)
-        print(t2)
-        print("++++++++++++")
-        
+        t2 = right_tangle[1]               
         for k,v in t2.items():
-            cur_tang = tuple([k,v])
-            print("\n Right Tangle:{0}".format(cur_tang))
             for b,c in right_strands.items():
-                cur_str = tuple([b,c])
-                print("** Right Strand:{0}".format(cur_str))
                 if doescross((v,k),(b,c)):
-                    print("FIRST CROSS!")
                     new_tangle = (t1[v], v) # on the left        
-                    print("Left Tangle:{0}".format(new_tangle))
                     # search for a strand in left_strand, that ends in b
                     for key,value in left_strands.items():
                         if value == b:
                             new_strand = (key,b) # get the left coordinate     
-                    print("Left Strand:{0}".format(new_strand))
                     if doescross(new_tangle, new_strand):
-                        print("DOUBLE CROSS!")
                         pairs.append([k, c])
         return pairs
 
@@ -1360,24 +1334,22 @@ class StrandAlgebra(DGAlgebra): #The `parent` of  Strand Algebra
         c_1 is strandCrossing(False) called from the left_strands
         c_2 is the strandCrossing(True) called from right_strands'''
         # check if compatible cb and remove
-        
-        print("\n#############")
-        print(get_range_dict(left_strands))
-    
-        print(get_domain_dict(right_strands))
-        print("\n#############")
-        
-        if not (get_range_dict(left_strands) == get_domain_dict(right_strands)):
-            raise TypeError ("strand boundaries don't line up")
-                
-        double_crossings = []
-        for crossing_pair in c_l:
-            x1 = crossing_pair[0][1]
-            x2 = crossing_pair[1][1]
-            for r_crossing_pair in c_r:
-                if set({r_crossing_pair[0][0],r_crossing_pair[1][0]}) == set({x1,x2}):
-                    double_crossings.append((crossing_pair,r_crossing_pair))
+
+        if(self.is_left): # left side of  the tangle
+            left_strands = dict_shift(left_strands,True)# shift left_strand to the right
+            c_l = dict_shift_double(c_l ,True)
+        else:
+            right_strands = dict_shift(right_strands,False) # shift left_strand to the right 
+            c_r = dict_shift_double(c_r ,False)
             
+        if not (get_range_dict(left_strands) == get_domain_dict(right_strands)):
+            raise TypeError ("strand boundaries don't line up")         
+            
+        double_crossings = []
+        for k in list(c_l.items()):
+            for v in list(c_r.items()):
+                if get_end_dict(k) == get_start_dict(v):
+                    double_crossings.append(k)
         return double_crossings
 
 class StrandAlgebraElement(Element):
