@@ -75,8 +75,7 @@ class TANGLE:
                     r_pairs.update({key:value})
         else:  # remove the dummy pair
             for key,value in pairs.items():
-                if(key[0] == 0 or value[0] == 0) or (key[0] == 100 or \
-                                                 value[0] == 100):
+                if(key[0] == 0 or value[0] == 0) or (key[0] == 100 or value[0] == 100):
                     key_name = key                  
             del pairs[key_name]
             if a == 0:
@@ -122,10 +121,7 @@ class TANGLE:
             if len(self.caps) != 1:
                 assert TypeError("Something is wrong -- more than one caps")    
             else: # there is one cap
-                for key, value in self.caps.items():
-                    print(key,value)
-                    print((key,value))
-                    
+                for key, value in self.caps.items():            
                     # If cap
                     if orientation((key,value),True) == (-1, 1) or \
                     orientation((key,value),True) == (1, -1): 
@@ -144,21 +140,17 @@ class TANGLE:
                 assert TypeError("Something is wrong -- more than one cups")
             
             else: # there is one cup
-                for key, value in self.cups.items():
-                   
+                for key, value in self.cups.items():  
                     #if cup
                     if orientation((key,value), False) == (-1, 1) or \
-                    orientation((key,value),False) == (1, -1): 
-                        
+                    orientation((key,value),False) == (1, -1):                  
                         if (key[0] - 0.5) != self.i_mid:
-                                raise TypeError("Something is wrong with cup length")
-                   
+                                raise TypeError("Something is wrong with cup length")            
                         new_pt = (key[0]- 0.5, min(key[1],value[1]) + 0.5)
-                        r_pairs_wc.update({key:new_pt,new_pt: value})
-                        
+                        r_pairs_wc.update({key:new_pt,new_pt: value})    
                     else:
                         raise TypeError("Something is wrong -- this is not a cup")
-                        
+
         self.l_pairs_wc = l_pairs_wc
         self.r_pairs_wc = r_pairs_wc
         
@@ -208,7 +200,7 @@ class TANGLE:
             else:
                 #raise orient != (-1, 1)
                 self.ud_pairs_l.update({key:value}) # maintain
-                
+          
         # right half
         for key,value in self.r_pairs.items():
             orient = orientation((key,value), False)
@@ -235,7 +227,7 @@ class TANGLE:
         s_1 = set(val[0] for val in pairs.keys())  
         s_2 = set(val[0] for val in pairs.values())  
         s = s_1.union(s_2)
-        
+    
         assert len(s) == 3 # if it is not an elementary tangle assert error
         
         # classify whether it belongs to left half or right half
@@ -1055,7 +1047,6 @@ class Simple_Strand(Generator):
                 dict1 = self.tangle.orient_left_rhalf
                 dict2 = self.strands.right_converted
                 num+= simple_intersections(dict1,dict2,False)
-            
         if option == 2:
             #tangle right & strand
             if left_half == True: ## left half:
