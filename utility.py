@@ -422,8 +422,11 @@ def doescross_simple(left,right):
     L1 = line(a[0],a[1])
     L2 = line(b[0],b[1])
     
-    R = intersection(L1, L2)
-    #R = seg_intersect(a,b)
+    if left != right:
+        R = intersection(L1, L2)
+    else:
+        R = None
+  
     if R == False:
         R = None
     elif R[0] < 1 or R[0] > 2: 
@@ -465,8 +468,11 @@ def doescross_simple_rc(left,right):
     L1 = line(a[0],a[1])
     L2 = line(b[0],b[1])
     
-    R = intersection(L1, L2)
-    #R = seg_intersect(a,b)
+    if left != right:
+        R = intersection(L1, L2)
+    else:
+        R = None
+ 
     if R == False:
         R = None
     elif R[0] < 1 or R[0] > 2: 
@@ -530,6 +536,32 @@ def reorganize_sign(cross):
         b2 = cross[0][1]
     
     return [a1,a2,b1,b2]
+
+#dic = {(1,3):((1.5,1.5),(2,3.5)),
+#        (4,2): ((1.5, 4.5),(2,2.5))}
+#cross = ((4,2),(1,3))
+
+def reorganize_sign_2(cross, dic):
+    '''reorganizes the point like `reorganize_sign_2()` but with coordinates
+    taken from `dic` object'''
+
+    s1 = dic[cross[0]][0][1] # 4.5
+    s2 = dic[cross[1]][0][1] # 1.5
+    
+    if s1> s2:
+        a1 = dic[cross[0]][0] #(1.5, 4.5)
+        b1 = dic[cross[1]][0] #((1.5,1.5)
+        a2 = dic[cross[0]][1] #(2,2.5))
+        b2 = dic[cross[1]][1] #3(2,3.5))
+       
+    else:
+        a1 = dic[cross[1]][0] #(1.5, 4.5)
+        b1 = dic[cross[0]][0] #((1.5,1.5)
+        a2 = dic[cross[1]][1] #(2,2.5))
+        b2 = dic[cross[0]][1] #3(2,3.5))
+    
+    return [a1,a2,b1,b2]
+
 def doescross(a,b):
     '''given a pair of lines = ((x_1, y_1), (x_2, y_2)), ((x_3, y_3), (x_4, y_4))
     goes the intersection point, if one exists between, if not return None''' 
@@ -674,8 +706,6 @@ def intersections( dict1, dict2, itself = False):
     i.e : The Key is the pair that causes intersection points
           The Value is the intersection points
     ''' 
-    
-    
     intersections = {}
     
     if itself == False:
