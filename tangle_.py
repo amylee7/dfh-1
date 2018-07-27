@@ -1,15 +1,9 @@
 import operator
-#from algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
+from algebra import *
 import statistics as st
-from utility import orientation,orientation_i, complement,generate_subset,\
- doescross, doescross_simple, intersections, simple_intersections, F2
-from Algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator
-from Algebra import E0
 from utility import *
-#get_domain, get_range, generate_bijections, combinations, \
-#                get_domain_dict, get_range_dict, doescross_simple_rc,in_between_list, \
-#                reorganize_sign, reorganize_sign_2,dict_shift, get_start_dict, get_end_dict,\
-#                dict_shift_double, doescross_bool, mod_between, mod_helper, replace_sd_1, replace_sd_2
+from Algebra import *
+
 '''Elementary tangles and its algebras'''
 
 class TANGLE:
