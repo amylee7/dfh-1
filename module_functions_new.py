@@ -274,7 +274,6 @@ def d_m_raw_B(gen): # checked
     t_r = list(gen.tangle.r_pairs_wc.items())
     # right no cross strands
     r_horizontals = types[3]
-#    print("\n Right no cross strands:{0} \n".format(r_horizontals))
     for s1,s2 in r_horizontals:
         is_crossed = False
         for tangle in t_r: # right half tangles
@@ -290,7 +289,6 @@ def d_m_raw_B(gen): # checked
             lst.append(mod_helper_2(gen, s1, s2))
     # left cross strands
     l_cross = types[2]
-#    print("\n left cross strands:{0} \n".format(l_cross))
     for s1,s2 in l_cross:
         is_crossed = False
         for tangle in t_l: #left half tangles
@@ -306,8 +304,6 @@ def d_m_raw_B(gen): # checked
             lst.append(mod_helper_2(gen, s1, s2))
     # left above right strands
     l_above_r = types[6]
-#    print("\n left above right strands:{0} \n".format(l_above_r))
-#    print(len(l_above_r))
     for s1, s2 in l_above_r:
         is_crossed = False
         left_pair = (tuple(np.subtract(s2[0],(0.5,0))), s1[0])
@@ -325,8 +321,6 @@ def d_m_raw_B(gen): # checked
             lst.append(mod_helper_2(gen, s1, s2))
     # left below  right strands
     l_below_r = types[5]      
-#    print("\n left below right strands:{0} \n".format(l_below_r))
-#    print(len(l_below_r))
     for s1,s2 in l_below_r: #s1 on the left, s2 on the right
         is_crossed = False
         left_pair = (tuple(np.subtract(s2[0],(0.5,0))), s1[0])
