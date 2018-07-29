@@ -1,6 +1,5 @@
 import operator
 from copy import deepcopy
-#from algebra import DGAlgebra, Element, Generator, Tensor, TensorGenerator, 
 import statistics as st
 from utility import orientation,orientation_i, complement,generate_subset,\
  doescross, doescross_simple, intersections, simple_intersections, F2
