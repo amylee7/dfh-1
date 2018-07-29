@@ -374,7 +374,7 @@ def helper(tang_left, tang_right, pair_1, pair_2, pair_3, is_left, option):
     * tang_right is dictionary object of pairs 
     * Pair_1 is the coordinate of two pairs of strand on the left
     * Pair_2 is the coordinate of two pairs of strand in the middle
-    * Pair_3 is the coordinate of two pairs of strand in the middle.'''
+    * Pair_3 is the coordinate of two pairs of strand in the right.'''
     mod = False
     if is_left: # only check mod relations 1,2,3
         for k,v in tang_left.items():
